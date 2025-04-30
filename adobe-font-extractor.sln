@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35931.197 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "adobe-font-extractor", "adobe-font-extractor.csproj", "{626E93FA-1EC9-01E9-0E02-D3E8CDABB05F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{626E93FA-1EC9-01E9-0E02-D3E8CDABB05F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{626E93FA-1EC9-01E9-0E02-D3E8CDABB05F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{626E93FA-1EC9-01E9-0E02-D3E8CDABB05F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{626E93FA-1EC9-01E9-0E02-D3E8CDABB05F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {049A08AF-4303-47C8-A6EA-F8860B26CE8C}
+	EndGlobalSection
+EndGlobal
