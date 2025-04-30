@@ -1,130 +1,125 @@
-using System;
-using System.Text.RegularExpressions;
-using System.IO;
-using System.Drawing;
+﻿using System.CommandLine;
 using System.Drawing.Text;
+using System.Runtime.Versioning;
 
-namespace adobe_font_extractor
+[SupportedOSPlatform("windows")]
+class Program
 {
-    class Program
+    static async Task<int> Main(string[] args)
     {
-        static void Main(string[] args)
-        {
-            Console.Clear();
-            Console.WriteLine(
-                "*******************\n" +
-                "Adobe Font Revealer\n" +
-                "*******************\n\n" +
+        var rootCommand = new RootCommand("Extracts Adobe Creative Cloud fonts to be used in other programs.");
+        var copyCommand = new Command("copy", "Copy files from Creative Cloud directory.");
 
-                "Select an option:\n" +
-                "1) Copy Files\n" +
-                "2) Extract Font Names"
-            );
-            string userInput = Console.ReadLine();
-            switch (userInput)
+        var dryRunOption = new Option<bool>
+            (name: "--dry",
+            description: "Perform a dry run and don't copy files. Useful for troubleshooting.");
+        dryRunOption.AddAlias("-d");
+        var verboseOption = new Option<bool>
+            (name: "--verbose",
+            description: "Enable verbose logging.");
+        verboseOption.AddAlias("-v");
+        var adobeDirectoryOption = new Option<DirectoryInfo>
+            (name: "--adobe-dir",
+            description: "Path to the Adobe \"CoreSync\" directory.",
+            getDefaultValue: () =>
             {
-                case "1":
-                    CopyFonts();
-                    break;
-                case "2":
-                    NameFonts();
-                    break;
-                default:
-                    Console.WriteLine("Please input an option.");
-                    Main(args);
-                    break;
+                return new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\Adobe\CoreSync");
+            })
+        {
+            ArgumentHelpName = "PATH",
+        };
+        var outputDirectoryOption = new Option<DirectoryInfo>
+            (name: "--output-dir",
+            description: "Path to the output directory. Will create a new directory if it doesn't already exist.",
+            getDefaultValue: () =>
+            {
+                return new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + @"\Adobe\Fonts");
+            })
+        {
+            ArgumentHelpName = "PATH"
+        };
+
+        rootCommand.Add(copyCommand);
+
+        copyCommand.AddOption(dryRunOption);
+        copyCommand.AddOption(verboseOption);
+        copyCommand.AddOption(adobeDirectoryOption);
+        copyCommand.AddOption(outputDirectoryOption);
+
+        copyCommand.SetHandler(CopyFiles, dryRunOption, verboseOption, adobeDirectoryOption, outputDirectoryOption);
+
+        return await rootCommand.InvokeAsync(args);
+    }
+    
+    static void CopyFiles(bool isDry, bool isVerbose, DirectoryInfo adobeDirectory, DirectoryInfo outputDirectory)
+    {
+        DirectoryInfo coreSyncDirectory = adobeDirectory.GetDirectories("r", SearchOption.AllDirectories)[0];
+
+        if (isVerbose)
+        {
+            Console.WriteLine($"Found CoreSync folder at {coreSyncDirectory}.");
+        }
+
+        if (!outputDirectory.Exists)
+        {
+            if (!isDry)
+            {
+                outputDirectory.Create();
+            }
+
+            if (isVerbose)
+            {
+                Console.WriteLine($"Created output directory at {outputDirectory}");
+            }
+        } else {
+            if (isVerbose)
+            {
+                Console.WriteLine($"Found output directory at {outputDirectory}");
             }
         }
 
-        static void CopyFonts()
+        FileInfo[] fontList = coreSyncDirectory.GetFiles();
+
+        if (isVerbose)
         {
-            Console.WriteLine("Specify Adobe Font folder? (y/n)");
-            string userInputFont = Console.ReadLine();
-            
-            string fontFolderPath = "";
-            switch (userInputFont)
-            {
-                case "y":
-                    Console.WriteLine("Adobe Fonts folder path:");
-                    fontFolderPath = Console.ReadLine();
-                    break;
-                case "n":
-                    string appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                    fontFolderPath = appDataFolder + @"\Adobe\CoreSync\plugins\livetype\r";
-                    break;
-            }
-
-            Console.WriteLine("Specify output folder? (will default to Documents\\Adobe\\Fonts) (y/n)");
-            string userInputOutput = Console.ReadLine();
-            
-            string outputFolder = "";
-            switch (userInputOutput)
-            {
-                case "y":
-                    Console.WriteLine("Adobe Fonts folder path:");
-                    outputFolder = Console.ReadLine();
-                    if (!outputFolder.EndsWith(@"\")) {
-                        outputFolder += @"\";
-                    }
-                    break;
-                case "n":
-                    string documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                    outputFolder = documentsFolder + @"\Adobe\Fonts\";
-                    break;
-            }
-            
-            string[] fontList = System.IO.Directory.GetFiles(fontFolderPath);
-            foreach (string fontPath in fontList) {
-                PrivateFontCollection fontCollection = new PrivateFontCollection();
-
-                fontCollection.AddFontFile(fontPath);
-
-                string fontName = fontCollection.Families[0].Name;
-
-                string newFontPath = Path.ChangeExtension(outputFolder + fontName, ".otf");
-
-                File.Copy(fontPath, newFontPath, true);
-
-                string[] fontPathArray = fontPath.Split('\\');
-
-                Console.WriteLine(fontPathArray[fontPathArray.Length - 1] + "\t c→ \t" + fontName + ".otf");
-
-                fontCollection.Dispose();
-            }
+            Console.WriteLine($"Found {fontList.Length} fonts.");
         }
 
-        static void NameFonts()
+        foreach (FileInfo fontFile in fontList)
         {
-            Console.WriteLine("Specify Adobe Fonts folder? (y/n)");
-            string userInputFont = Console.ReadLine();
-            
-            string fontFolderPath = "";
-            switch (userInputFont)
+            PrivateFontCollection fontCollection = new();
+            fontCollection.AddFontFile(fontFile.FullName);
+
+            if (isVerbose)
             {
-                case "y":
-                    Console.WriteLine("Adobe Fonts folder path:");
-                    fontFolderPath = Console.ReadLine();
-                    break;
-                case "n":
-                    string appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                    fontFolderPath = appDataFolder + @"\Adobe\CoreSync\plugins\livetype\r";
-                    break;
+                Console.WriteLine($"Processing file {fontFile}.");
             }
 
-            string[] fontList = System.IO.Directory.GetFiles(fontFolderPath);
-            foreach (string fontPath in fontList) {
-                PrivateFontCollection fontCollection = new PrivateFontCollection();
+            string fontName = fontCollection.Families[0].Name;
+            string outputPath = Path.Join(outputDirectory.FullName, fontName);
+            string outputFileName = Path.ChangeExtension(outputPath, ".otf");
 
-                fontCollection.AddFontFile(fontPath);
-
-                string fontName = fontCollection.Families[0].Name;
-
-                string[] fontPathArray = fontPath.Split('\\');
-
-                Console.WriteLine(fontPathArray[fontPathArray.Length - 1] + "\t → \t" + fontName + ".otf");
-
-                fontCollection.Dispose();
+            if (isVerbose)
+            {
+                Console.WriteLine
+                ($"Found font {fontName}.");
             }
+
+            if (!isDry)
+            {
+                fontFile.CopyTo(outputFileName, true);
+
+                if (isVerbose)
+                {
+                    Console.WriteLine($"Copied font {fontName} to {outputFileName}.");
+                }
+            }
+
+            string[] splitFontPath = fontFile.FullName.Split("\\");
+            string fontObfuscatedName = splitFontPath[^1];
+            Console.WriteLine($"{fontObfuscatedName}\t->\t{fontName}.otf");
+
+            fontCollection.Dispose();
         }
     }
 }
